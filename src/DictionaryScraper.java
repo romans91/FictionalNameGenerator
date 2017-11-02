@@ -17,7 +17,7 @@ import java.util.zip.GZIPInputStream;
 
 // http://www.dictionary.com/dictionary-sitemap/sitemap.xml
 public class DictionaryScraper extends JFrame {
-    private final static String DICTIONARY_URL = "http://www.dictionary.com";
+    public static final String DICTIONARY_URL = "http://www.dictionary.com";
 
 
     private static boolean working = false, shouldBeWorking = false;
@@ -26,15 +26,13 @@ public class DictionaryScraper extends JFrame {
     private static File syllableStore;
     private static PrintWriter writer;
 
-
-
-    public static void generateSyllablesFromWebsiteFile(int scrapeLimit) {
+    public static void generateSyllablesFromWebsiteFile(int scrapePageLimit) {
         if (!working) {
             working = true;
             shouldBeWorking = true;
             syllablesFoundSoFar = 0;
             pagesRead = 0;
-            totalPages = scrapeLimit;
+            totalPages = scrapePageLimit;
             try {
                 syllableStore = new File(FictionalNameGenerator.SYLLABLES_FROM_WEBSITE_FILENAME);
 
@@ -44,7 +42,7 @@ public class DictionaryScraper extends JFrame {
 
                 writer = new PrintWriter(FictionalNameGenerator.SYLLABLES_FROM_WEBSITE_FILENAME, "UTF-8");
 
-                scrape(scrapeLimit, 5);
+                scrape(scrapePageLimit, 5);
 
                 writer.close();
 
@@ -55,7 +53,7 @@ public class DictionaryScraper extends JFrame {
         }
     }
 
-    private static void scrape(int pageLimit, int considerateDelay) {
+    private static void scrape(int scrapePageLimit, int delayBetweenPagesMillis) {
         try {
 
             URLConnection robotsTxtConnection = new URL(String.format(DICTIONARY_URL + "/robots.txt")).openConnection();
@@ -68,7 +66,6 @@ public class DictionaryScraper extends JFrame {
                     sitemapUrl = line.substring(line.indexOf("http://"));
                 }
             }
-
 
             URLConnection sitemapConnection = new URL(sitemapUrl).openConnection();
 
@@ -103,8 +100,8 @@ public class DictionaryScraper extends JFrame {
                                 return;
                             }
                             pagesRead++;
-                            scrapeSyllablesOutOfSinglePage(zList.item(k).getTextContent(), considerateDelay);
-                            if (pagesRead >= pageLimit) {
+                            scrapeSyllablesOutOfSinglePage(zList.item(k).getTextContent(), delayBetweenPagesMillis);
+                            if (pagesRead >= scrapePageLimit) {
                                 return;
                             }
                         }
@@ -122,17 +119,12 @@ public class DictionaryScraper extends JFrame {
         }
     }
 
-    private static void scrapeSyllablesOutOfSinglePage(String inURL, int considerateDelay) {
+    private static void scrapeSyllablesOutOfSinglePage(String inURL, int delayBetweenPagesMillis) {
         try {
             BufferedReader in = new BufferedReader(new InputStreamReader(new URL(inURL).openConnection().getInputStream()));
+            char[] unwantedChars = {'<', '>', '(', ')', '/'};
 
-            for (int i = 0; i < 1263; i++) {
-                in.readLine();
-            }
-
-            Thread.sleep((long) (Math.random() * considerateDelay) + considerateDelay);
-
-            char[] forbiddenChars = {'<', '>', '(', ')', '/'};
+            Thread.sleep((long) (Math.random() * delayBetweenPagesMillis) + delayBetweenPagesMillis);
 
             String line;
             boolean foundSyllables = false;
@@ -141,28 +133,31 @@ public class DictionaryScraper extends JFrame {
                 if (line.contains("·")) {
                     for (String s : line.split("\"")) {
                         if (s.contains("·")) {
-                            boolean forbiddenCharFound = false;
+                            boolean unwantedCharFound = false;
 
-                            for (char c : forbiddenChars) {
+                            for (char c : unwantedChars) {
                                 if (s.contains(String.valueOf(c))) {
-                                    forbiddenCharFound = true;
+                                    unwantedCharFound = true;
                                 }
                             }
 
-                            if (!forbiddenCharFound) {
+                            if (!unwantedCharFound) {
                                 for (String t : s.split("·|\\ |\\-")) {
                                     for (char c : t.toCharArray()) {
                                         if (!Character.isLetter(c)) {
-                                            forbiddenCharFound = true;
+                                            unwantedCharFound = true;
                                         }
                                     }
 
-                                    if (!forbiddenCharFound) {
-                                        if (syllablesFoundSoFar > 0) {
-                                            writer.write(",\n");
+                                    if (!unwantedCharFound) {
+                                        t = sanitizeString(t);
+                                        if (t.length() > 0) {
+                                            if (syllablesFoundSoFar > 0) {
+                                                writer.write(",\n");
+                                            }
+                                            writer.write(t);
+                                            syllablesFoundSoFar++;
                                         }
-                                        writer.write(sanitizeString(t));
-                                        syllablesFoundSoFar++;
                                     }
                                 }
                             }
@@ -182,7 +177,7 @@ public class DictionaryScraper extends JFrame {
         String out = "";
         for (int i = 0; i < in.length(); i++) {
             char c = in.charAt(i);
-            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
                 out += c;
             }
         }

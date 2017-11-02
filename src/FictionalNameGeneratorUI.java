@@ -77,16 +77,13 @@ public class FictionalNameGeneratorUI extends JFrame {
     }
 
     private void printGeneratedNames() {
-        try {
-            String text = "";
+        String text = "";
 
-            for (String s : FictionalNameGenerator.generateNames(wordsToGenerate, minSyllables, maxSyllables, customSyllableFrequency)) {
-                text += s + '\n';
-            }
-            resultsText.setText(text.substring(0, text.length() - 1));
-        } catch (IOException e) {
-            resultsText.setText(FictionalNameGenerator.SYLLABLES_FROM_WEBSITE_FILENAME + " not found.\nNeed to scrape before continuing!");
+        for (String s : FictionalNameGenerator.generateNames(wordsToGenerate, minSyllables, maxSyllables, customSyllableFrequency)) {
+            s = s.substring(0, 1).toUpperCase() + s.substring(1, s.length());
+            text += s + '\n';
         }
+        resultsText.setText(text.substring(0, text.length() - 1));
     }
 
     private void addDivider() {
